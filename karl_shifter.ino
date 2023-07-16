@@ -1,10 +1,9 @@
 #include <FastLED.h>
 
-//Number of LEDs on strip
 #define NUM_LEDS 92
 #define LED_DATA_PIN 2
 
-CRGB shifterLeds[NUM_LEDS]; //FastLED Library custom varible
+CRGB shifterLeds[NUM_LEDS];
 
 //	Inputs
 const int selSolidColor = 3;
@@ -47,6 +46,7 @@ int ejBoolMidRPM = 4500;   // Red
 int ejBoolHighRPM = 5500;  // Red Flashing \/
 int ejBoolMaxRPM = 6500;
 
+////MAPS the leds to a specific integer recieved from "EJ20RPM"
 // LED Select Idle to Start Range
 int boolLEDIdleToStartRangeLeft;
 int boolLEDIdleToStartRangeRight;
@@ -59,7 +59,7 @@ int boolLEDStartToMidRangeRight;
 int boolLEDMidToHighRangeLeft;
 int boolLEDMidToHighRangeRight;
 
-// Initialization startup script for Arduino
+
 void setup() {
 	FastLED.addLeds<WS2812B, LED_DATA_PIN, GRB>(shifterLeds, NUM_LEDS);
 	pinMode(selSolidColor, INPUT);
@@ -71,18 +71,15 @@ void setup() {
 	Serial.begin(9600);
 }
 
-//Main Arduino Loop
 void loop() {
 	Serial.print("Tail Light Circuit: ");
-	brightnessControl();
 	solidColor();
 	chillMode();
 	boolMode();
 }
 
-//This simple funtion controlls the master brightness for the entire LED Strip. Basically make it darker at light
 void brightnessControl() {
-	if (digitalRead(illuminationSig) == HIGH) { //Illumination signal = Parking lights on vehicle
+	if (digitalRead(illuminationSig) == HIGH) {
 		masterBrightness = 64;
 		Serial.print("On");
 	} else {
@@ -92,9 +89,11 @@ void brightnessControl() {
 	FastLED.setBrightness(masterBrightness);
 }
 
-//The main star of the show with the RPM reactive lighting
 void boolMode() {
 	while (digitalRead(selBoolMode) == HIGH) {
+
+    brightnessControl();
+
 		serialDebug("Bool Mode", EJ20RPM);
 		highPulse = pulseIn(ignitionSignalInput, 1000);
 		lowPulse = pulseIn(ignitionSignalInput, LOW);
@@ -102,22 +101,20 @@ void boolMode() {
 		cycleFreq = 1000000 / cycleTime;
 		cylinderFreq = cycleFreq * 60;
 		EJ20RPM = cylinderFreq * 4;
+
 		if (EJ20RPM == 0) {
 			for (int i = 0; i < NUM_LEDS; ++i) {
 				shifterLeds[i] = CHSV(0, 255, 0);
 			}
 			FastLED.show();
 		} else {
-			boolLEDIdleToStartRangeLeft = map(EJ20RPM, ejBoolIdleRPM, ejBoolStartRPM, 0, NUM_LEDS/2);
-			boolLEDIdleToStartRangeRight = map(EJ20RPM, ejBoolIdleRPM, ejBoolStartRPM, NUM_LEDS-1, NUM_LEDS/2+1);
 
-			boolLEDStartToMidRangeLeft = map(EJ20RPM, ejBoolStartRPM, ejBoolMidRPM, 0, NUM_LEDS/2);
-			boolLEDStartToMidRangeRight = map(EJ20RPM, ejBoolStartRPM, ejBoolMidRPM, NUM_LEDS-1, NUM_LEDS/2+1);
-
-			boolLEDMidToHighRangeLeft = map(EJ20RPM, ejBoolMidRPM, ejBoolHighRPM, 0, NUM_LEDS/2);
-			boolLEDMidToHighRangeRight = map(EJ20RPM, ejBoolMidRPM, ejBoolHighRPM, NUM_LEDS-1, NUM_LEDS/2+1);
 			// Idle to Start RPM Range
 			if (EJ20RPM >= ejBoolIdleRPM && EJ20RPM < ejBoolStartRPM) {
+
+        boolLEDIdleToStartRangeLeft = map(EJ20RPM, ejBoolIdleRPM, ejBoolStartRPM, 0, NUM_LEDS/2);
+        boolLEDIdleToStartRangeRight = map(EJ20RPM, ejBoolIdleRPM, ejBoolStartRPM, NUM_LEDS-1, NUM_LEDS/2+1);
+
 				for (int i = 0; i < boolLEDIdleToStartRangeLeft; ++i) {
 					shifterLeds[i] = CHSV(224, 255, 255);
 				}
@@ -126,7 +123,11 @@ void boolMode() {
 				}
 			}
 			// Start to Mid RPM Range
-			if (EJ20RPM >= ejBoolStartRPM && EJ20RPM < ejBoolMidRPM) {
+			else if (EJ20RPM >= ejBoolStartRPM && EJ20RPM < ejBoolMidRPM) {
+
+        boolLEDStartToMidRangeLeft = map(EJ20RPM, ejBoolStartRPM, ejBoolMidRPM, 0, NUM_LEDS/2);
+        boolLEDStartToMidRangeRight = map(EJ20RPM, ejBoolStartRPM, ejBoolMidRPM, NUM_LEDS-1, NUM_LEDS/2+1);
+
 				for (int i = 0; i < boolLEDStartToMidRangeLeft; ++i) {
 					shifterLeds[i] = CHSV(64, 255, 255);
 				}
@@ -135,7 +136,11 @@ void boolMode() {
 				}
 			}
 			// Mid to High RPM Range
-			if (EJ20RPM >= ejBoolMidRPM && EJ20RPM < ejBoolHighRPM) {
+			else if (EJ20RPM >= ejBoolMidRPM && EJ20RPM < ejBoolHighRPM) {
+
+        boolLEDMidToHighRangeLeft = map(EJ20RPM, ejBoolMidRPM, ejBoolHighRPM, 0, NUM_LEDS/2);
+        boolLEDMidToHighRangeRight = map(EJ20RPM, ejBoolMidRPM, ejBoolHighRPM, NUM_LEDS-1, NUM_LEDS/2+1);
+
 				for (int i = 0; i < boolLEDMidToHighRangeLeft; ++i) {
 					shifterLeds[i] = CHSV(0, 255, 255);
 				}
@@ -144,7 +149,7 @@ void boolMode() {
 				}
 			}
 			// High to Max RPM Range
-			if (EJ20RPM >= ejBoolHighRPM && EJ20RPM < ejBoolMaxRPM) {
+			else if (EJ20RPM >= ejBoolHighRPM && EJ20RPM < ejBoolMaxRPM) {
 				for (int i = 0; i < NUM_LEDS; ++i) {
 					shifterLeds[i] = CHSV(0, 255, 255);
 				}
@@ -163,9 +168,11 @@ void boolMode() {
 	}
 }
 
-// Solid Color...
 void solidColor() {
 	while (digitalRead(selSolidColor) == HIGH) {
+
+    brightnessControl();
+
 		serialDebug("Solid Color", hueValue);
 		hueValue = map(analogRead(huePot), 0, 1020, 0, 255);
 		for (int i = 0; i < NUM_LEDS; i++) {
@@ -175,9 +182,11 @@ void solidColor() {
 	}
 }
 
-//Gradient slow moves
 void chillMode() {
 	while (digitalRead(selChill) == HIGH) {
+
+    brightnessControl();
+
 		serialDebug("Chill Mode", paletteIndex);
 		fill_palette(shifterLeds, NUM_LEDS, paletteIndex, 255 / NUM_LEDS, chillPallet1, 255, LINEARBLEND);
 		EVERY_N_MILLISECONDS(20) {
@@ -187,8 +196,10 @@ void chillMode() {
 	}
 }
 
-//Debug status over serial console
 void serialDebug(char currentMode[], int debugValue) {
+  
+  brightnessControl();
+
 	Serial.print("Tail Light Circuit: ");
 	Serial.print(digitalRead(illuminationSig));
 	Serial.print(" Selected mode: ");
